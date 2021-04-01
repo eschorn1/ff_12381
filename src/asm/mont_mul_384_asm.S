@@ -10,10 +10,21 @@
 #   6. Document the heck out of it
 #   7. Benchmark criterion
 
+.align 8
+modulus:
+.quad         0xb9feffffffffaaab
+.quad         0x1eabfffeb153ffff
+.quad         0x6730d2a0f6b0f624
+.quad         0x64774b84f38512bf
+.quad         0x4b1ba7b6434bacd7
+.quad         0x1a0111ea397fe69a
+
 
 # 384x384=384 montgomery multiplication in 6 limbs
 # fn mont_mul_384(%rdi=&prod.v[0], %rsi=&a.v[0], %rdx=&b.v[0], %rcx=&MOD.v[0])
 mont_mul_384_asm:
+    # leaq    -71(%rip), %rcx  # TODO aiming to get rid of modulus passing
+    # TODO see https://www.boozallen.com/c/insight/blog/finding-the-instruction-pointer.html
 
     # Prologue: push all callee-save registers onto stack
     pushq   %rbx
@@ -22,6 +33,8 @@ mont_mul_384_asm:
     pushq   %r13
     pushq   %r14
     pushq   %r15
+
+    lea     -65(%rip), %rcx
 
     # The first partial product does not assume incoming A values in R10-15
     movq    %rdx, %r9               # Hang on to address of b.v[0]
@@ -168,3 +181,6 @@ mont_mul_384_asm:
     popq    %rbp
     popq    %rbx
     ret
+
+message:
+        .ascii  "Hello, world\n"

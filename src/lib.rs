@@ -10,7 +10,7 @@ extern crate lazy_static;
 
 #[cfg(test)]
 mod tests {
-    use crate::arith::{W64, fe_mul};
+    use crate::arith::{W64x6, mont_mul_384_rust};
     use crate::mont_mul_384_asm;
     use num_bigint::BigUint;
     use num_traits::Num;
@@ -26,7 +26,7 @@ mod tests {
         static ref R_INVERSE: BigUint = BigUint::modpow(&*R, &(&(*MODULUS_BIG) - 2_u8), &(*MODULUS_BIG));
     }
 
-    pub const MODULUS_W64: W64 = W64 {
+    pub const MODULUS_W64: W64x6 = W64x6 {
         v: [
             0xb9fe_ffff_ffff_aaab,
             0x1eab_fffe_b153_ffff,
@@ -43,11 +43,11 @@ mod tests {
         BigUint::from_bytes_le(&rnd_bytes) % &(*MODULUS_BIG)
     }
 
-    fn big_to_w64_r(x: &BigUint) -> W64 {
+    fn big_to_w64_r(x: &BigUint) -> W64x6 {
         let x_r: BigUint = (x * &(*R)) % &(*MODULUS_BIG);
         let mut bytes = [0_u8; 48];
         bytes[0..(((7 + x_r.bits()) / 8) as usize)].clone_from_slice(&x_r.to_bytes_le());
-        let mut result = W64::default();
+        let mut result = W64x6::default();
         for i in 0..6 {
             result.v[i] = u64::from_le_bytes(bytes[i * 8..(i + 1) * 8].try_into().unwrap());
         }
@@ -56,10 +56,11 @@ mod tests {
 
     #[test]
     fn test_mont_mul_384() {
-        let mut actual_asm = W64::default();
-        let mut actual_rust = W64::default();
+        let mut actual_asm = W64x6::default();
+        let mut actual_rust = W64x6::default();
 
-        for _i in 0..200_000 {
+        // 2B -> 5H
+        for _i in 0..20_000 {
             let a_big = rnd_big_mod_n();
             let b_big = rnd_big_mod_n();
             let a_w64 = big_to_w64_r(&a_big);
@@ -67,9 +68,9 @@ mod tests {
 
             let expected = (&a_big * &b_big) % &(*MODULUS_BIG);
             unsafe {
-                mont_mul_384_asm(&mut actual_asm.v[0], &a_w64.v[0], &b_w64.v[0], &MODULUS_W64.v[0])
+                mont_mul_384_asm(&mut actual_asm.v[0], &a_w64.v[0], &b_w64.v[0], &b_w64.v[0]); //&MODULUS_W64.v[0])
             };
-            fe_mul(&mut actual_rust, &a_w64, &b_w64, &MODULUS_W64);
+            mont_mul_384_rust(&mut actual_rust, &a_w64, &b_w64, &MODULUS_W64);
 
             assert_eq!(big_to_w64_r(&expected), actual_asm);
             assert_eq!(actual_asm, actual_rust);

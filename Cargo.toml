@@ -1,5 +1,5 @@
 [package]
-name = "ff12381"
+name = "ff_12381"
 version = "0.1.0"
 authors = ["eschorn@integritychain.com <eschorn@integritychain.com>"]
 edition = "2018"
