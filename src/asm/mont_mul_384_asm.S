@@ -2,13 +2,10 @@
 .set NPRIME,   0x89f3fffcfffcfffd
 
 # TODO
-# X 1. Macro followed by six instances
-# X 2. Optimize the first instance
-#   3. Study the implementation; there are several XORs (and others) to remove?
-#   4. Modulus as constant values here?
-#   5. Redraw diagrams nicely
-#   6. Document the heck out of it
-#   7. Benchmark criterion
+#   1. Finish documenting latter half of reduction step (macro)
+#   2. Further optimization?
+#      a. replace %rbx -> %rsi
+#      b. combine %r8 and %rbp somehow
 
 .align 8
 modulus:
@@ -20,11 +17,10 @@ modulus:
 .quad         0x1a0111ea397fe69a
 
 
-# 384x384=384 montgomery multiplication in 6 limbs
-# fn mont_mul_384(%rdi=&prod.v[0], %rsi=&a.v[0], %rdx=&b.v[0], %rcx=&MOD.v[0])
+# 384x384=384 montgomery multiplication in six 64-bit limbs
+# fn mont_mul_384_asm(%rdi=&prod.v[0], %rsi=&a.v[0], %rdx=&b.v[0])
 mont_mul_384_asm:
-    # leaq    -71(%rip), %rcx  # TODO aiming to get rid of modulus passing
-    # TODO see https://www.boozallen.com/c/insight/blog/finding-the-instruction-pointer.html
+    lea     -55(%rip), %rcx         # Load address of modulus into %rcx
 
     # Prologue: push all callee-save registers onto stack
     pushq   %rbx
@@ -33,8 +29,6 @@ mont_mul_384_asm:
     pushq   %r13
     pushq   %r14
     pushq   %r15
-
-    lea     -65(%rip), %rcx
 
     # The first partial product does not assume incoming A values in R10-15
     movq    %rdx, %r9               # Hang on to address of b.v[0]
@@ -149,7 +143,7 @@ mont_mul_384_asm:
     movq  %r14, %rsi
     movq  %r15, %rdx
 
-    # Subtract the MODULUS
+    # Subtract the modulus
     subq    0(%rcx), %r8        # subtract LSB of modulus
     sbbq    8(%rcx), %r9
     sbbq    16(%rcx), %rax
@@ -181,6 +175,3 @@ mont_mul_384_asm:
     popq    %rbp
     popq    %rbx
     ret
-
-message:
-        .ascii  "Hello, world\n"

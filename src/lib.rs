@@ -1,7 +1,11 @@
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+#![deny(clippy::cargo)]
+
 pub mod arith;
 
 extern "C" {
-    pub fn mont_mul_384_asm(result: &mut u64, a: &u64, b: &u64, modulus: &u64);
+    pub fn mont_mul_384_asm(result: &mut u64, a: &u64, b: &u64);
 }
 
 #[cfg(test)]
@@ -10,7 +14,7 @@ extern crate lazy_static;
 
 #[cfg(test)]
 mod tests {
-    use crate::arith::{W64x6, mont_mul_384_rust};
+    use crate::arith::{mont_mul_384_rust, W6x64};
     use crate::mont_mul_384_asm;
     use num_bigint::BigUint;
     use num_traits::Num;
@@ -23,19 +27,7 @@ mod tests {
             16
         ).unwrap();
         static ref R: BigUint = BigUint::from(1_u8) << 384;
-        static ref R_INVERSE: BigUint = BigUint::modpow(&*R, &(&(*MODULUS_BIG) - 2_u8), &(*MODULUS_BIG));
     }
-
-    pub const MODULUS_W64: W64x6 = W64x6 {
-        v: [
-            0xb9fe_ffff_ffff_aaab,
-            0x1eab_fffe_b153_ffff,
-            0x6730_d2a0_f6b0_f624,
-            0x6477_4b84_f385_12bf,
-            0x4b1b_a7b6_434b_acd7,
-            0x1a01_11ea_397f_e69a,
-        ],
-    };
 
     fn rnd_big_mod_n() -> BigUint {
         let mut rnd_bytes = [0_u8; 64];
@@ -43,11 +35,11 @@ mod tests {
         BigUint::from_bytes_le(&rnd_bytes) % &(*MODULUS_BIG)
     }
 
-    fn big_to_w64_r(x: &BigUint) -> W64x6 {
+    fn big_to_w6x64_r(x: &BigUint) -> W6x64 {
         let x_r: BigUint = (x * &(*R)) % &(*MODULUS_BIG);
         let mut bytes = [0_u8; 48];
         bytes[0..(((7 + x_r.bits()) / 8) as usize)].clone_from_slice(&x_r.to_bytes_le());
-        let mut result = W64x6::default();
+        let mut result = W6x64::default();
         for i in 0..6 {
             result.v[i] = u64::from_le_bytes(bytes[i * 8..(i + 1) * 8].try_into().unwrap());
         }
@@ -56,23 +48,23 @@ mod tests {
 
     #[test]
     fn test_mont_mul_384() {
-        let mut actual_asm = W64x6::default();
-        let mut actual_rust = W64x6::default();
+        let mut actual_asm = W6x64::default();
+        let mut actual_rust = W6x64::default();
 
         // 2B -> 5H
-        for _i in 0..20_000 {
+        for _i in 0..5_000_000 {
             let a_big = rnd_big_mod_n();
             let b_big = rnd_big_mod_n();
-            let a_w64 = big_to_w64_r(&a_big);
-            let b_w64 = big_to_w64_r(&b_big);
+            let a_w64 = big_to_w6x64_r(&a_big);
+            let b_w64 = big_to_w6x64_r(&b_big);
 
             let expected = (&a_big * &b_big) % &(*MODULUS_BIG);
             unsafe {
-                mont_mul_384_asm(&mut actual_asm.v[0], &a_w64.v[0], &b_w64.v[0], &b_w64.v[0]); //&MODULUS_W64.v[0])
+                mont_mul_384_asm(&mut actual_asm.v[0], &a_w64.v[0], &b_w64.v[0]);
             };
-            mont_mul_384_rust(&mut actual_rust, &a_w64, &b_w64, &MODULUS_W64);
+            mont_mul_384_rust(&mut actual_rust, &a_w64, &b_w64);
 
-            assert_eq!(big_to_w64_r(&expected), actual_asm);
+            assert_eq!(big_to_w6x64_r(&expected), actual_asm);
             assert_eq!(actual_asm, actual_rust);
         }
     }
