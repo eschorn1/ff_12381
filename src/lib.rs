@@ -14,7 +14,7 @@ extern crate lazy_static;
 
 #[cfg(test)]
 mod tests {
-    use crate::arith::{mont_mul_384_rust, W6x64};
+    use crate::arith::{fe_add, fe_sub, W6x64, fe_mont_mul};
     use crate::mont_mul_384_asm;
     use num_bigint::BigUint;
     use num_traits::Num;
@@ -47,6 +47,43 @@ mod tests {
     }
 
     #[test]
+    fn test_fe_add() {
+        let mut actual_rust = W6x64::default();
+
+        // 2B -> 5H
+        for _i in 0..5_000_000 {
+            let a_big = rnd_big_mod_n();
+            let b_big = rnd_big_mod_n();
+            let a_w64 = big_to_w6x64_r(&a_big);
+            let b_w64 = big_to_w6x64_r(&b_big);
+
+            let expected = (&a_big + &b_big) % &(*MODULUS_BIG);
+            fe_add(&mut actual_rust, &a_w64, &b_w64);
+
+            assert_eq!(big_to_w6x64_r(&expected), actual_rust);
+        }
+    }
+
+    #[test]
+    fn test_fe_sub() {
+        let mut actual_rust = W6x64::default();
+
+        // 2B -> 5H
+        for _i in 0..5_000_000 {
+            let a_big = rnd_big_mod_n();
+            let b_big = rnd_big_mod_n();
+            let a_w64 = big_to_w6x64_r(&a_big);
+            let b_w64 = big_to_w6x64_r(&b_big);
+
+            let expected = (&a_big + &(*MODULUS_BIG) - &b_big) % &(*MODULUS_BIG);
+            fe_sub(&mut actual_rust, &a_w64, &b_w64);
+
+            assert_eq!(big_to_w6x64_r(&expected), actual_rust);
+        }
+    }
+
+
+    #[test]
     fn test_mont_mul_384() {
         let mut actual_asm = W6x64::default();
         let mut actual_rust = W6x64::default();
@@ -62,7 +99,7 @@ mod tests {
             unsafe {
                 mont_mul_384_asm(&mut actual_asm.v[0], &a_w64.v[0], &b_w64.v[0]);
             };
-            mont_mul_384_rust(&mut actual_rust, &a_w64, &b_w64);
+            fe_mont_mul(&mut actual_rust, &a_w64, &b_w64);
 
             assert_eq!(big_to_w6x64_r(&expected), actual_asm);
             assert_eq!(actual_asm, actual_rust);

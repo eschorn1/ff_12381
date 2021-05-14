@@ -1,9 +1,12 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use ff_12381::arith::{mont_mul_384_rust, W6x64};
+use ff_12381::arith::{mont_mul_384_rust, W6x64, fe_add, fe_sub};
 use ff_12381::mont_mul_384_asm;
 use num_bigint::BigUint;
 use num_traits::Num;
 use std::time::Duration;
+
+// RUSTFLAGS="--emit asm" cargo bench
+// see, e.g.: target/release/deps/ff_12381-329599c0ba35fa2a.s
 
 // Arbitrary input and expected values (for 1000 iterations, to ensure functionality)
 const X_6X64: W6x64 = W6x64 {
@@ -52,6 +55,33 @@ fn mul_rust(x: &W6x64, y: &W6x64, expected: &W6x64) {
     assert_eq!(&xx, expected);
 }
 
+// Montgomery addition written in Rust
+fn add_rust(x: &W6x64, y: &W6x64, expected: &W6x64) {
+    let mut xx = x.clone();
+    let mut yy = y.clone();
+    let mut result = W6x64::default();
+    for _i in 0..1_000 {
+        fe_add(&mut result, &xx, &yy);
+        yy = xx;
+        xx = result;
+    }
+    //assert_eq!(&xx, expected);
+}
+
+// Montgomery addition written in Rust
+fn sub_rust(x: &W6x64, y: &W6x64, expected: &W6x64) {
+    let mut xx = x.clone();
+    let mut yy = y.clone();
+    let mut result = W6x64::default();
+    for _i in 0..1_000 {
+        fe_sub(&mut result, &xx, &yy);
+        yy = xx;
+        xx = result;
+    }
+    //assert_eq!(&xx, expected);
+}
+
+
 // Montgomery multiplication written in x86-64 assembly
 fn mul_asm(x: &W6x64, y: &W6x64, expected: &W6x64) {
     let mut xx = x.clone();
@@ -92,10 +122,25 @@ pub fn bench_mul_asm(c: &mut Criterion) {
     });
 }
 
+// Drive Rust addition with input and expected result
+pub fn bench_add(c: &mut Criterion) {
+    c.bench_function("add_rust X 1000 iterations", |b| {
+        b.iter(|| add_rust(&X_6X64, &Y_6X64, &EXPECTED_W64))
+    });
+}
+
+// Drive Rust subtraction with input and expected result
+pub fn bench_sub(c: &mut Criterion) {
+    c.bench_function("sub_rust X 1000 iterations", |b| {
+        b.iter(|| sub_rust(&X_6X64, &Y_6X64, &EXPECTED_W64))
+    });
+}
+
+
 // Run all three benchmarks
 criterion_group! {
     name = benches;
-    config = Criterion::default().measurement_time(Duration::new(60, 0));
-    targets = bench_mul_big, bench_mul_rust, bench_mul_asm
+    config = Criterion::default().measurement_time(Duration::new(10, 0));
+    targets = bench_add, bench_sub, bench_mul_big, bench_mul_rust, bench_mul_asm
 }
 criterion_main!(benches);
