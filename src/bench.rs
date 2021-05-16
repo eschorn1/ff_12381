@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use ff_12381::arith::{mont_mul_384_rust, W6x64, fe_add, fe_sub};
+use ff_12381::arith::{W6x64, fe_add, fe_sub, fe_mont_mul};
 use ff_12381::mont_mul_384_asm;
 use num_bigint::BigUint;
 use num_traits::Num;
@@ -48,7 +48,7 @@ fn mul_rust(x: &W6x64, y: &W6x64, expected: &W6x64) {
     let mut yy = y.clone();
     let mut result = W6x64::default();
     for _i in 0..1_000 {
-        mont_mul_384_rust(&mut result, &xx, &yy);
+        fe_mont_mul(&mut result, &xx, &yy);
         yy = xx;
         xx = result;
     }
@@ -140,7 +140,7 @@ pub fn bench_sub(c: &mut Criterion) {
 // Run all three benchmarks
 criterion_group! {
     name = benches;
-    config = Criterion::default().measurement_time(Duration::new(10, 0));
+    config = Criterion::default().measurement_time(Duration::new(60, 0));
     targets = bench_add, bench_sub, bench_mul_big, bench_mul_rust, bench_mul_asm
 }
 criterion_main!(benches);
