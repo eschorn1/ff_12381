@@ -16,18 +16,18 @@ pub fn fe_add(result: &mut W6x64, a: &W6x64, b: &W6x64) {
     let mut sum = W6x64::default();
     let mut carry = false;
     for i in 0..6 {
-        let sum_carry_a = a.v[i].overflowing_add(b.v[i]);
-        let sum_carry_b = sum_carry_a.0.overflowing_add(if carry { 1 } else { 0 });
-        sum.v[i] = sum_carry_b.0;
-        carry = sum_carry_a.1 | sum_carry_b.1
+        let sum_car_a = a.v[i].overflowing_add(b.v[i]);
+        let sum_car_b = sum_car_a.0.overflowing_add(if carry { 1 } else { 0 });
+        sum.v[i] = sum_car_b.0;
+        carry = sum_car_a.1 | sum_car_b.1
     }
 
     let mut trial = W6x64::default();
     let mut borrow = false;
     for i in 0..6 {
-        let diff_borrow = sum.v[i].overflowing_sub(N[i] + if borrow { 1 } else { 0 });
-        trial.v[i] = diff_borrow.0;
-        borrow = diff_borrow.1;
+        let dif_bor = sum.v[i].overflowing_sub(N[i] + if borrow { 1 } else { 0 });
+        trial.v[i] = dif_bor.0;
+        borrow = dif_bor.1;
     }
 
     let select_sum = u64::from(borrow).wrapping_neg();
@@ -48,21 +48,19 @@ pub fn fe_sub(result: &mut W6x64, a: &W6x64, b: &W6x64) {
     let mut diff = W6x64::default();
     let mut borrow_diff = false;
     for i in 0..6 {
-        let diff_borrow_a = a.v[i].overflowing_sub(b.v[i]);
-        let diff_borrow_b = diff_borrow_a
-            .0
-            .overflowing_sub(if borrow_diff { 1 } else { 0 });
-        diff.v[i] = diff_borrow_b.0;
-        borrow_diff = diff_borrow_a.1 | diff_borrow_b.1
+        let dif_bor_a = a.v[i].overflowing_sub(b.v[i]);
+        let dif_bor_b = dif_bor_a.0.overflowing_sub(if borrow_diff { 1 } else { 0 });
+        diff.v[i] = dif_bor_b.0;
+        borrow_diff = dif_bor_a.1 | dif_bor_b.1
     }
 
     let mask = u64::from(borrow_diff).wrapping_neg();
     let mut borrow_fix = false;
     for i in 0..6 {
-        let diff_borrow =
+        let dif_bor =
             diff.v[i].overflowing_sub((mask & CORRECTION[i]) + if borrow_fix { 1 } else { 0 });
-        result.v[i] = diff_borrow.0;
-        borrow_fix = diff_borrow.1;
+        result.v[i] = dif_bor.0;
+        borrow_fix = dif_bor.1;
     }
 }
 
@@ -100,8 +98,7 @@ pub fn fe_mont_mul(result: &mut W6x64, a: &W6x64, b: &W6x64) {
         let mut carry = 0_u64;
         for j in 0..6 {
             let hilo = u128::from(a.v[j]) * u128::from(b.v[i])
-                + u128::from(temp[i + j])
-                + u128::from(carry);
+                + u128::from(temp[i + j]) + u128::from(carry);
             temp[i + j] = hilo as u64;
             carry = (hilo >> 64) as u64;
         }

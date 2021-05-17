@@ -2,6 +2,6 @@ extern crate cc;
 
 fn main() {
     cc::Build::new()
-        .file("src/asm/mont_mul_384_asm.S")
+        .file("src/asm/mont_mul_384_asm.s")
         .compile("ff_12381_asm");
 }
