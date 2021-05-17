@@ -12,8 +12,6 @@ extern "C" {
 #[macro_use]
 extern crate lazy_static;
 
-use crate::arith::W6x64;
-
 #[cfg(test)]
 mod tests {
     use num_bigint::BigUint;

@@ -1,15 +1,7 @@
-use std::fmt;
-
 #[repr(C)]
 #[derive(Default, Clone, Copy, Debug, PartialEq)]
 pub struct W6x64 {
-    pub v: [u64; 6],  // From least significant [0] to most significant [5]
-}
-
-impl fmt::Display for W6x64 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({:?})", self.v)
-    }
+    pub v: [u64; 6], // From least significant [0] to most significant [5]
 }
 
 // BLS12-381 field prime, least significant portion first
@@ -19,12 +11,13 @@ const N: [u64; 6] = [
 ];
 
 #[allow(clippy::needless_range_loop)]
+#[inline]
 pub fn fe_add(result: &mut W6x64, a: &W6x64, b: &W6x64) {
     let mut sum = W6x64::default();
     let mut carry = false;
     for i in 0..6 {
         let sum_carry_a = a.v[i].overflowing_add(b.v[i]);
-        let sum_carry_b = sum_carry_a.0.overflowing_add(if carry {1} else {0});
+        let sum_carry_b = sum_carry_a.0.overflowing_add(if carry { 1 } else { 0 });
         sum.v[i] = sum_carry_b.0;
         carry = sum_carry_a.1 | sum_carry_b.1
     }
@@ -32,7 +25,7 @@ pub fn fe_add(result: &mut W6x64, a: &W6x64, b: &W6x64) {
     let mut trial = W6x64::default();
     let mut borrow = false;
     for i in 0..6 {
-        let diff_borrow = sum.v[i].overflowing_sub(N[i] + if borrow {1} else {0});
+        let diff_borrow = sum.v[i].overflowing_sub(N[i] + if borrow { 1 } else { 0 });
         trial.v[i] = diff_borrow.0;
         borrow = diff_borrow.1;
     }
@@ -50,12 +43,15 @@ const CORRECTION: [u64; 6] = [
 ];
 
 #[allow(clippy::needless_range_loop)]
+#[inline]
 pub fn fe_sub(result: &mut W6x64, a: &W6x64, b: &W6x64) {
     let mut diff = W6x64::default();
     let mut borrow_diff = false;
     for i in 0..6 {
         let diff_borrow_a = a.v[i].overflowing_sub(b.v[i]);
-        let diff_borrow_b = diff_borrow_a.0.overflowing_sub(if borrow_diff {1} else {0});
+        let diff_borrow_b = diff_borrow_a
+            .0
+            .overflowing_sub(if borrow_diff { 1 } else { 0 });
         diff.v[i] = diff_borrow_b.0;
         borrow_diff = diff_borrow_a.1 | diff_borrow_b.1
     }
@@ -63,7 +59,8 @@ pub fn fe_sub(result: &mut W6x64, a: &W6x64, b: &W6x64) {
     let mask = u64::from(borrow_diff).wrapping_neg();
     let mut borrow_fix = false;
     for i in 0..6 {
-        let diff_borrow = diff.v[i].overflowing_sub((mask & CORRECTION[i]) + if borrow_fix {1} else {0});
+        let diff_borrow =
+            diff.v[i].overflowing_sub((mask & CORRECTION[i]) + if borrow_fix { 1 } else { 0 });
         result.v[i] = diff_borrow.0;
         borrow_fix = diff_borrow.1;
     }
@@ -95,13 +92,16 @@ pub fn fe_to_norm(result: &mut [u64; 6], a: &W6x64) {
 const N_PRIME: u64 = 0x89f3_fffc_fffc_fffd;
 
 #[allow(clippy::cast_possible_truncation)]
+#[inline]
 pub fn fe_mont_mul(result: &mut W6x64, a: &W6x64, b: &W6x64) {
     let mut temp = [0_u64; 12];
 
     for i in 0..6 {
         let mut carry = 0_u64;
         for j in 0..6 {
-            let hilo = u128::from(a.v[j]) * u128::from(b.v[i]) + u128::from(temp[i + j]) + u128::from(carry);
+            let hilo = u128::from(a.v[j]) * u128::from(b.v[i])
+                + u128::from(temp[i + j])
+                + u128::from(carry);
             temp[i + j] = hilo as u64;
             carry = (hilo >> 64) as u64;
         }
@@ -111,7 +111,8 @@ pub fn fe_mont_mul(result: &mut W6x64, a: &W6x64, b: &W6x64) {
 
         let mut carry = 0_u64;
         for j in 0..6 {
-            let hilo = u128::from(m) * u128::from(N[j]) + u128::from(temp[i + j]) + u128::from(carry);
+            let hilo =
+                u128::from(m) * u128::from(N[j]) + u128::from(temp[i + j]) + u128::from(carry);
             temp[i + j] = hilo as u64;
             carry = (hilo >> 64) as u64;
         }
