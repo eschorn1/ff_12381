@@ -5,6 +5,7 @@ pub struct W6x64 {
 }
 
 // BLS12-381 field prime, least significant portion first
+#[rustfmt::skip]
 const N: [u64; 6] = [
     0xb9fe_ffff_ffff_aaab, 0x1eab_fffe_b153_ffff, 0x6730_d2a0_f6b0_f624,
     0x6477_4b84_f385_12bf, 0x4b1b_a7b6_434b_acd7, 0x1a01_11ea_397f_e69a,
@@ -37,6 +38,7 @@ pub fn fe_add(result: &mut W6x64, a: &W6x64, b: &W6x64) {
 }
 
 // 2**384 - N, least significant portion first
+#[rustfmt::skip]
 const CORRECTION: [u64; 6] = [
     0x4601_0000_0000_5555, 0xe154_0001_4eac_0000, 0x98cf_2d5f_094f_09db,
     0x9b88_b47b_0c7a_ed40, 0xb4e4_5849_bcb4_5328, 0xe5fe_ee15_c680_1965,
@@ -65,6 +67,7 @@ pub fn fe_sub(result: &mut W6x64, a: &W6x64, b: &W6x64) {
 }
 
 // R^2 mod N, least significant portion first
+#[rustfmt::skip]
 const R_SQUARED: W6x64 = W6x64 {
     v: [0xf4df_1f34_1c34_1746, 0x0a76_e6a6_09d1_04f1, 0x8de5_476c_4c95_b6d5,
         0x67eb_88a9_939d_83c0, 0x9a79_3e85_b519_952d, 0x1198_8fe5_92ca_e3aa]
@@ -76,6 +79,7 @@ pub fn fe_to_mont(result: &mut W6x64, a: &[u64; 6]) {
 }
 
 // One, least significant portion first
+#[rustfmt::skip]
 const ONE: W6x64 = W6x64 {
     v: [0x0000_0000_0000_0001, 0x0000_0000_0000_0000, 0x0000_0000_0000_0000,
         0x0000_0000_0000_0000, 0x0000_0000_0000_0000, 0x0000_0000_0000_0000]
@@ -98,7 +102,8 @@ pub fn fe_mont_mul(result: &mut W6x64, a: &W6x64, b: &W6x64) {
         let mut carry = 0_u64;
         for j in 0..6 {
             let hilo = u128::from(a.v[j]) * u128::from(b.v[i])
-                + u128::from(temp[i + j]) + u128::from(carry);
+                + u128::from(temp[i + j])
+                + u128::from(carry);
             temp[i + j] = hilo as u64;
             carry = (hilo >> 64) as u64;
         }

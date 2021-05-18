@@ -14,12 +14,12 @@ extern crate lazy_static;
 
 #[cfg(test)]
 mod tests {
+    use crate::arith::{fe_add, fe_mont_mul, fe_sub, fe_to_mont, fe_to_norm, W6x64};
+    use crate::mont_mul_384_asm;
     use num_bigint::BigUint;
     use num_traits::Num;
     use rand::Rng;
     use std::convert::TryInto;
-    use crate::mont_mul_384_asm;
-    use crate::arith::{W6x64, fe_add, fe_sub, fe_to_mont, fe_to_norm, fe_mont_mul};
 
     lazy_static! {
         static ref N_BIG: BigUint = BigUint::from_str_radix(
@@ -65,7 +65,6 @@ mod tests {
         }
     }
 
-
     #[test]
     fn test_fe_sub() {
         let mut actual_mont = W6x64::default();
@@ -107,7 +106,9 @@ mod tests {
             assert_eq!(big_to_6u64(&expected), actual_norm);
 
             // Test assembly code
-            unsafe { mont_mul_384_asm(&mut actual_mont.v[0], &a_mont.v[0], &b_mont.v[0]); };
+            unsafe {
+                mont_mul_384_asm(&mut actual_mont.v[0], &a_mont.v[0], &b_mont.v[0]);
+            };
             fe_to_norm(&mut actual_norm, &actual_mont);
             assert_eq!(big_to_6u64(&expected), actual_norm);
         }
