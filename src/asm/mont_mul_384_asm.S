@@ -1,4 +1,5 @@
 .global mont_mul_384_asm
+.global _mont_mul_384_asm
 .set NPRIME,   0x89f3fffcfffcfffd
 
 # TODO
@@ -19,6 +20,7 @@ modulus:
 
 # 384x384=384 montgomery multiplication in six 64-bit limbs
 # fn mont_mul_384_asm(%rdi=&prod.v[0], %rsi=&a.v[0], %rdx=&b.v[0])
+_mont_mul_384_asm:
 mont_mul_384_asm:
     lea     -55(%rip), %rcx         # Load address of modulus into %rcx
 
